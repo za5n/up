@@ -1,6 +1,4 @@
-import zipfile
-
-index_html = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -152,7 +150,7 @@ index_html = """<!DOCTYPE html>
   <hr />
 
   <h3>Payments</h3>
-  <textarea id="payment-confirmations" rows="4" placeholder="Enter usernames (one per line) to confirm payment and deliver"></textarea>
+  <textarea id="payment-confirmations" rows="4" placeholder="Enter username to confirm payment and deliver"></textarea>
   <button onclick="confirmPayment()">Confirm Payment & Deliver</button>
 
   <button onclick="logoutAdmin()" style="margin-top:10px; background:#c62828;">Logout Admin</button>
@@ -360,141 +358,9 @@ index_html = """<!DOCTYPE html>
     if (e.key === 'L') adminLogin();
   });
 
-  // Confirm payment and deliver credentials
-  function confirmPayment() {
-    const textArea = document.getElementById('payment-confirmations');
-    const usernamesToDeliver = textArea.value.trim().split(/\\n+/).map(u => u.trim()).filter(u => u);
-    let anyInvalid = false;
-
-    usernamesToDeliver.forEach(u => {
-      if (!usernames.includes(u)) {
-        alert(`Username "${u}" does not exist.`);
-        anyInvalid = true;
-        return;
-      }
-      if (deliveries[u] && deliveries[u].delivered) {
-        alert(`Username "${u}" is already delivered.`);
-        anyInvalid = true;
-        return;
-      }
-      // For demo, we just assign dummy Gmail/password on delivery
-      deliveries[u] = {
-        email: u + '@gmail.com',
-        password: 'password123',
-        delivered: true
-      };
-    });
-
-    if (!anyInvalid) {
-      alert('Payment confirmed and credentials delivered.');
-      textArea.value = '';
-      saveAll();
-    }
-  }
-
   renderUsernames();
-  renderAdminUsernames();
   renderSections();
-  renderAdminSections();
+
 </script>
 </body>
 </html>
-"""
-
-payment_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Payment - user plug</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #070707;
-    color: #e6e6e6;
-    margin: 0; padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-  }
-  .container {
-    background: #141414;
-    padding: 30px;
-    border-radius: 12px;
-    max-width: 500px;
-    width: 90%;
-    text-align: center;
-    box-shadow: 0 0 18px rgba(255,255,255,0.1);
-  }
-  h1 {
-    margin-bottom: 20px;
-  }
-  p {
-    margin: 10px 0;
-  }
-  input, button {
-    padding: 12px;
-    margin-top: 10px;
-    width: 100%;
-    border-radius: 8px;
-    border: none;
-    font-size: 1rem;
-  }
-  input {
-    background: #1a1a1a;
-    color: #eee;
-  }
-  button {
-    background: #9c27b0;
-    color: white;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  button:hover {
-    background: #7b1fa2;
-  }
-  #credentials {
-    margin-top: 20px;
-    background: #0f0f0f;
-    padding: 20px;
-    border-radius: 10px;
-    display: none;
-    white-space: pre-wrap;
-    font-family: monospace;
-    text-align: left;
-  }
-</style>
-</head>
-<body>
-<div class="container">
-  <h1>Complete Your Payment</h1>
-  <div id="purchase-info"></div>
-  <p>Please send your crypto payment to one of these wallets:</p>
-  <p><strong>BTC Wallet:</strong> bc1q8esxg0y7u67elcv24qc32a33rps8m7ds2x0k49</p>
-  <p><strong>ETH Wallet:</strong> 0x4A24E8e086077b4892Fba5Bf27c050e02a3fc3E9</p>
-  <p>After payment, come back here and enter your username to receive credentials.</p>
-  <input id="usernameInput" placeholder="Enter your purchased username" />
-  <button onclick="checkDelivery()">Get Credentials</button>
-
-  <div id="credentials"></div>
-</div>
-
-<script>
-  const STORAGE_KEYS = {
-    deliveries: 'deliveries',
-    usernames: 'usernames',
-    prices: 'prices'
-  };
-
-  const purchase = localStorage.getItem('currentPurchase');
-  const infoDiv = document.getElementById('purchase-info');
-  if (purchase) {
-    infoDiv.textContent = `Purchasing: ${purchase}`;
-  } else {
-    infoDiv.textContent = 'No purchase info found.';
-  }
-
-  function checkDelivery() {
-    const username = document
