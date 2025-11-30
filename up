@@ -1,0 +1,500 @@
+import zipfile
+
+index_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>user plug enhanced</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #070707;
+    color: #e6e6e6;
+    margin: 0; padding: 0;
+  }
+  header {
+    background: #111;
+    padding: 20px;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+    animation: fadeIn 0.8s ease;
+  }
+  @keyframes fadeIn {
+    from {opacity:0;transform:translateY(20px);}
+    to {opacity:1;transform:translateY(0);}
+  }
+  .item, .section-item {
+    background: #141414;
+    margin-bottom: 20px;
+    padding: 20px;
+    border-radius: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 18px rgba(255,255,255,0.05);
+  }
+  .item h3, .section-item h4 {
+    margin: 0;
+    font-size: 1.3rem;
+    flex: 1;
+  }
+  button {
+    background: #9c27b0;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    color: white;
+    transition: 0.2s;
+    margin-left: 10px;
+  }
+  button:hover {
+    background: #7b1fa2;
+    transform: scale(1.05);
+  }
+  footer {
+    text-align: center;
+    padding: 40px 0;
+    color: #777;
+  }
+  #admin-panel {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #0f0f0f;
+    border-radius: 12px;
+    display: none;
+  }
+  input, textarea, select {
+    width: 100%;
+    padding: 8px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    margin-top: 8px;
+  }
+  .section-header {
+    cursor: pointer;
+    user-select: none;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+  }
+  .section-header svg {
+    width: 20px; height: 20px;
+    margin-right: 8px;
+    fill: #9c27b0;
+  }
+  .collapsible-content {
+    display: none;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<header>user plug enhanced</header>
+
+<div class="container" id="username-list"></div>
+
+<!-- Sections -->
+<div class="container">
+  <div class="section">
+    <div class="section-header" data-target="discord-list">
+      <svg viewBox="0 0 24 24"><path d="M20 0H4a4 4 0 0 0-4 4v16a4 4 0 0 0 4 4h16a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4zM8 17H6v-2h2v2zm6 0h-2v-2h2v2zm3-8h-12v7h12v-7z"/></svg> Discord</div>
+    <div class="collapsible-content" id="discord-list"></div>
+  </div>
+  <div class="section">
+    <div class="section-header" data-target="tiktok-list">
+      <svg viewBox="0 0 24 24"><path d="M12 2c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10h-3v4c-1.4.1-2.7-.2-3.8-1v-7h6v3h-3.2a7 7 0 0 1 3 6c0 3.9-3.1 7-7 7s-7-3.1-7-7 3.1-7 7-7v-4z"/></svg> TikTok</div>
+    <div class="collapsible-content" id="tiktok-list"></div>
+  </div>
+  <div class="section">
+    <div class="section-header" data-target="telegram-list">
+      <svg viewBox="0 0 24 24"><path d="M22 2L2 12l5 2 2 6 4-6 7-3z"/></svg> Telegram</div>
+    <div class="collapsible-content" id="telegram-list"></div>
+  </div>
+</div>
+
+<footer>© Username Shop — Crypto Checkout Enabled</footer>
+
+<!-- Admin Panel -->
+<div id="admin-panel">
+  <h2>Admin Panel</h2>
+
+  <h3>Usernames</h3>
+  <input id="newUsername" placeholder="New username" />
+  <input id="newPrice" placeholder="Price (USD)" type="number" />
+  <button onclick="addUsername()">Add Username</button>
+  <div id="username-admin-list"></div>
+
+  <hr />
+
+  <h3>Sections</h3>
+  <select id="section-select">
+    <option value="discord">Discord</option>
+    <option value="tiktok">TikTok</option>
+    <option value="telegram">Telegram</option>
+  </select>
+  <input id="newSectionItem" placeholder="New section item" />
+  <button onclick="addSectionItem()">Add to Section</button>
+  <div id="section-admin-list"></div>
+
+  <hr />
+
+  <h3>Payments</h3>
+  <textarea id="payment-confirmations" rows="4" placeholder="Enter usernames (one per line) to confirm payment and deliver"></textarea>
+  <button onclick="confirmPayment()">Confirm Payment & Deliver</button>
+
+  <button onclick="logoutAdmin()" style="margin-top:10px; background:#c62828;">Logout Admin</button>
+</div>
+
+<script>
+  const ADMIN_PASSWORD = "Mason2310";
+
+  let adminRemember = localStorage.getItem('adminRemember');
+  if (adminRemember === 'true') {
+    document.getElementById('admin-panel').style.display = 'block';
+  }
+
+  // Data storage keys
+  const STORAGE_KEYS = {
+    usernames: 'usernames',
+    prices: 'prices',
+    deliveries: 'deliveries',
+    sections: 'sections'
+  };
+
+  // Load data from localStorage or initialize
+  let usernames = JSON.parse(localStorage.getItem(STORAGE_KEYS.usernames)) || ['@GhostBlade', '@SilentStorm', '@NightRunner', '@CyberShade'];
+  let prices = JSON.parse(localStorage.getItem(STORAGE_KEYS.prices)) || { '@GhostBlade': 50, '@SilentStorm': 45, '@NightRunner': 60, '@CyberShade': 55 };
+  let deliveries = JSON.parse(localStorage.getItem(STORAGE_KEYS.deliveries)) || {}; // {username: {email, password, delivered}}
+  let sections = JSON.parse(localStorage.getItem(STORAGE_KEYS.sections)) || {
+    discord: ['DiscordUser1#1234', 'DiscordUser2#5678'],
+    tiktok: ['@tiktokuser1', '@tiktokuser2'],
+    telegram: ['@telegramuser1', '@telegramuser2']
+  };
+
+  function saveAll() {
+    localStorage.setItem(STORAGE_KEYS.usernames, JSON.stringify(usernames));
+    localStorage.setItem(STORAGE_KEYS.prices, JSON.stringify(prices));
+    localStorage.setItem(STORAGE_KEYS.deliveries, JSON.stringify(deliveries));
+    localStorage.setItem(STORAGE_KEYS.sections, JSON.stringify(sections));
+  }
+
+  // Render usernames with price and Buy button
+  function renderUsernames() {
+    const container = document.getElementById('username-list');
+    container.innerHTML = '';
+    usernames.forEach(name => {
+      const price = prices[name] || 'N/A';
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = `<h3>${name} - $${price}</h3><button onclick="goToPayment('${name}')">Buy</button>`;
+      container.appendChild(item);
+    });
+  }
+
+  // Admin panel: render usernames with edit price and delete
+  function renderAdminUsernames() {
+    const adminList = document.getElementById('username-admin-list');
+    adminList.innerHTML = '';
+    usernames.forEach(name => {
+      const price = prices[name] || 0;
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <input value="${name}" disabled style="flex:1; margin-right:10px;" />
+        <input type="number" value="${price}" style="width:100px; margin-right:10px;" onchange="updatePrice('${name}', this.value)" />
+        <button onclick="deleteUsername('${name}')">Delete</button>
+      `;
+      adminList.appendChild(div);
+    });
+  }
+
+  function addUsername() {
+    const nameInput = document.getElementById('newUsername');
+    const priceInput = document.getElementById('newPrice');
+    const newName = nameInput.value.trim();
+    const newPrice = Number(priceInput.value);
+    if (!newName) return alert('Enter a username');
+    if (isNaN(newPrice) || newPrice <= 0) return alert('Enter a valid price');
+
+    if (usernames.includes(newName)) return alert('Username already exists');
+
+    usernames.push(newName);
+    prices[newName] = newPrice;
+    saveAll();
+    renderUsernames();
+    renderAdminUsernames();
+
+    nameInput.value = '';
+    priceInput.value = '';
+  }
+
+  function updatePrice(name, newPrice) {
+    const priceNum = Number(newPrice);
+    if (isNaN(priceNum) || priceNum <= 0) return alert('Invalid price');
+    prices[name] = priceNum;
+    saveAll();
+    renderUsernames();
+  }
+
+  function deleteUsername(name) {
+    if (!confirm(`Delete username ${name}?`)) return;
+    usernames = usernames.filter(u => u !== name);
+    delete prices[name];
+    delete deliveries[name];
+    saveAll();
+    renderUsernames();
+    renderAdminUsernames();
+  }
+
+  // Sections rendering
+  function renderSections() {
+    ['discord', 'tiktok', 'telegram'].forEach(section => {
+      const container = document.getElementById(section + '-list');
+      container.innerHTML = '';
+      sections[section].forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'section-item';
+        div.innerHTML = `<h4>${item}</h4>`;
+        container.appendChild(div);
+      });
+    });
+  }
+
+  // Admin panel: render section items with delete button
+  function renderAdminSections() {
+    const adminSectionList = document.getElementById('section-admin-list');
+    const sel = document.getElementById('section-select');
+    const section = sel.value;
+    adminSectionList.innerHTML = '';
+
+    sections[section].forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'section-item';
+      div.innerHTML = `
+        <input value="${item}" style="flex:1; margin-right:10px;" onchange="updateSectionItem('${section}', ${i}, this.value)" />
+        <button onclick="deleteSectionItem('${section}', ${i})">Delete</button>
+      `;
+      adminSectionList.appendChild(div);
+    });
+  }
+
+  function addSectionItem() {
+    const sel = document.getElementById('section-select');
+    const section = sel.value;
+    const newItemInput = document.getElementById('newSectionItem');
+    const val = newItemInput.value.trim();
+    if (!val) return alert('Enter a new item');
+    sections[section].push(val);
+    saveAll();
+    renderSections();
+    renderAdminSections();
+    newItemInput.value = '';
+  }
+
+  function updateSectionItem(section, index, value) {
+    sections[section][index] = value.trim();
+    saveAll();
+    renderSections();
+  }
+
+  function deleteSectionItem(section, index) {
+    if (!confirm('Delete this item?')) return;
+    sections[section].splice(index, 1);
+    saveAll();
+    renderSections();
+    renderAdminSections();
+  }
+
+  // Collapsible sections toggling
+  document.querySelectorAll('.section-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const targetId = header.getAttribute('data-target');
+      const content = document.getElementById(targetId);
+      if (content.style.display === 'block') content.style.display = 'none';
+      else content.style.display = 'block';
+    });
+  });
+
+  // Payment flow
+  function goToPayment(username) {
+    localStorage.setItem('currentPurchase', username);
+    window.location.href = 'payment.html';
+  }
+
+  // Admin login system
+  function adminLogin() {
+    const entered = prompt('Enter admin password:');
+    if (entered === ADMIN_PASSWORD) {
+      alert('Admin access granted.');
+      document.getElementById('admin-panel').style.display = 'block';
+      if (confirm('Remember admin login on this device?')) {
+        localStorage.setItem('adminRemember', 'true');
+      }
+      renderAdminUsernames();
+      renderAdminSections();
+    } else {
+      alert('Incorrect password.');
+    }
+  }
+
+  function logoutAdmin() {
+    localStorage.removeItem('adminRemember');
+    alert('Logged out.');
+    document.getElementById('admin-panel').style.display = 'none';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'L') adminLogin();
+  });
+
+  // Confirm payment and deliver credentials
+  function confirmPayment() {
+    const textArea = document.getElementById('payment-confirmations');
+    const usernamesToDeliver = textArea.value.trim().split(/\\n+/).map(u => u.trim()).filter(u => u);
+    let anyInvalid = false;
+
+    usernamesToDeliver.forEach(u => {
+      if (!usernames.includes(u)) {
+        alert(`Username "${u}" does not exist.`);
+        anyInvalid = true;
+        return;
+      }
+      if (deliveries[u] && deliveries[u].delivered) {
+        alert(`Username "${u}" is already delivered.`);
+        anyInvalid = true;
+        return;
+      }
+      // For demo, we just assign dummy Gmail/password on delivery
+      deliveries[u] = {
+        email: u + '@gmail.com',
+        password: 'password123',
+        delivered: true
+      };
+    });
+
+    if (!anyInvalid) {
+      alert('Payment confirmed and credentials delivered.');
+      textArea.value = '';
+      saveAll();
+    }
+  }
+
+  renderUsernames();
+  renderAdminUsernames();
+  renderSections();
+  renderAdminSections();
+</script>
+</body>
+</html>
+"""
+
+payment_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Payment - user plug</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #070707;
+    color: #e6e6e6;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .container {
+    background: #141414;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 0 18px rgba(255,255,255,0.1);
+  }
+  h1 {
+    margin-bottom: 20px;
+  }
+  p {
+    margin: 10px 0;
+  }
+  input, button {
+    padding: 12px;
+    margin-top: 10px;
+    width: 100%;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+  }
+  input {
+    background: #1a1a1a;
+    color: #eee;
+  }
+  button {
+    background: #9c27b0;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover {
+    background: #7b1fa2;
+  }
+  #credentials {
+    margin-top: 20px;
+    background: #0f0f0f;
+    padding: 20px;
+    border-radius: 10px;
+    display: none;
+    white-space: pre-wrap;
+    font-family: monospace;
+    text-align: left;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Complete Your Payment</h1>
+  <div id="purchase-info"></div>
+  <p>Please send your crypto payment to one of these wallets:</p>
+  <p><strong>BTC Wallet:</strong> bc1q8esxg0y7u67elcv24qc32a33rps8m7ds2x0k49</p>
+  <p><strong>ETH Wallet:</strong> 0x4A24E8e086077b4892Fba5Bf27c050e02a3fc3E9</p>
+  <p>After payment, come back here and enter your username to receive credentials.</p>
+  <input id="usernameInput" placeholder="Enter your purchased username" />
+  <button onclick="checkDelivery()">Get Credentials</button>
+
+  <div id="credentials"></div>
+</div>
+
+<script>
+  const STORAGE_KEYS = {
+    deliveries: 'deliveries',
+    usernames: 'usernames',
+    prices: 'prices'
+  };
+
+  const purchase = localStorage.getItem('currentPurchase');
+  const infoDiv = document.getElementById('purchase-info');
+  if (purchase) {
+    infoDiv.textContent = `Purchasing: ${purchase}`;
+  } else {
+    infoDiv.textContent = 'No purchase info found.';
+  }
+
+  function checkDelivery() {
+    const username = document
